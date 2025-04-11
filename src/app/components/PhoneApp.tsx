@@ -31,20 +31,20 @@ const PhoneApp = () => {
     setMounted(true);
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 2000);
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-
-      // Handle redirection based on auth state
+      
+      // Handle navigation based on auth state
       if (currentUser) {
         // If user is logged in and on auth pages, redirect to home
         if (pathname?.includes('/auth') || pathname === '/') {
-          router.push('/');
+          router.push('/home');
         }
       } else {
-        // If user is not logged in and not on auth pages, redirect to landing
+        // If user is not logged in and not on auth pages, redirect to auth
         if (!pathname?.includes('/auth')) {
           router.push('/auth');
         }
@@ -55,7 +55,7 @@ const PhoneApp = () => {
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [router, pathname]);
+  }, [pathname, router]);
 
   if (!mounted || loading) {
     return <SplashScreen />;
@@ -70,7 +70,7 @@ const PhoneApp = () => {
       {user ? (
         <HomeScreen />
       ) : (
-          <LandingPage />
+        <LandingPage />
       )}
     </MainContent>
   );

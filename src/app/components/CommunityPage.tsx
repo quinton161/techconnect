@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import Image from 'next/image';
+import { Bell } from 'lucide-react';
+import BottomNav from '@/components/BottomNav';
+import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { User, Users, MessageSquare, Heart } from 'lucide-react';
-import BottomNav from './BottomNav';
+import { doc, getDoc } from 'firebase/firestore';
+import Link from 'next/link';
 
 const Container = styled.div`
   max-width: 500px;
@@ -19,25 +22,41 @@ const Container = styled.div`
 `;
 
 const Header = styled.header`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 1rem;
   background: white;
-  border-bottom: 1px solid #eee;
   position: sticky;
   top: 0;
   z-index: 10;
-  
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #0088CC;
-  }
+`;
+
+const HeaderTitle = styled.h1`
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #0077b6;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const ProfileImageContainer = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
 `;
 
 const MainContent = styled.main`
   flex: 1;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: 70px;
+  -webkit-overflow-scrolling: touch;
   
   &::-webkit-scrollbar {
     width: 6px;
@@ -48,117 +67,191 @@ const MainContent = styled.main`
   }
   
   &::-webkit-scrollbar-thumb {
-    background-color: #0088CC;
+    background-color: rgba(0, 119, 182, 0.3);
     border-radius: 3px;
   }
 `;
 
-const CommunityGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  padding: 1rem;
+const SectionTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 1rem;
+  color: #333;
 `;
 
-const CommunityCard = styled.div`
-  background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  transition: transform 0.2s;
+const FeaturesGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0 1rem;
+`;
+
+const FeatureCard = styled.div`
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+  height: 200px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  transition: transform 0.2s;
   
   &:hover {
     transform: translateY(-2px);
   }
 `;
 
-const CardHeader = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  
-  h3 {
-    font-size: 1rem;
-    font-weight: 500;
-  }
+const FeatureImage = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
 `;
 
-const CardStats = styled.div`
-  display: flex;
-  gap: 1rem;
-  font-size: 0.75rem;
-  color: #666;
+const FeatureTitle = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: white;
+  font-weight: 600;
+  text-align: center;
+`;
+
+const BackButton = styled.button`
+  background-color: #0077b6;
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  padding: 1rem;
+  margin: 1.5rem 1rem;
+  width: calc(100% - 2rem);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
   
-  div {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
+  &:hover {
+    background-color: #00669e;
   }
 `;
 
 export default function CommunityPage() {
-  const [communities, setCommunities] = useState([]);
+  const router = useRouter();
+  const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCommunities = async () => {
+    async function fetchUserData() {
       try {
         const user = auth.currentUser;
-        if (user) {
-          const communitiesRef = collection(db, 'communities');
-          const q = query(communitiesRef, where('members', 'array-contains', user.uid));
-          const querySnapshot = await getDocs(q);
-          
-          const communitiesData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          
-          setCommunities(communitiesData);
+        if (!user) {
+          router.push('/auth');
+          return;
         }
+
+        // Get additional user data from Firestore if available
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userDoc.exists()) {
+          setUserData({
+            ...userDoc.data(),
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || userDoc.data().displayName || user.email?.split('@')[0]
+          });
+        } else {
+          // If no document exists, just use the auth data
+          setUserData({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || user.email?.split('@')[0]
+          });
+        }
+        
       } catch (error) {
-        console.error('Error fetching communities:', error);
+        console.error("Error fetching user data:", error);
       } finally {
         setLoading(false);
       }
-    };
+    }
+    
+    fetchUserData();
+  }, [router]);
 
-    fetchCommunities();
-  }, []);
+  // Community features data
+  const features = [
+    {
+      id: 1,
+      title: 'Event Listing',
+      image: '/images/community1.png',
+      route: '/events'
+    },
+    {
+      id: 2,
+      title: 'Mentorship',
+      image: '/images/community2.png',
+      route: '/mentorship'
+    },
+    {
+      id: 3,
+      title: 'Project Colloboration',
+      image: '/images/community3.png',
+      route: '/projects'
+    },
+    {
+      id: 4,
+      title: 'Job Board',
+      image: '/images/community4.png',
+      route: '/jobs'
+    }
+  ];
+
+  const handleBackToHome = () => {
+    router.push('/home');
+  };
 
   return (
     <Container>
       <Header>
-        <h1>Communities</h1>
+        <HeaderTitle>Community</HeaderTitle>
+        <HeaderRight>
+          <ProfileImageContainer>
+            <Image 
+              src={userData?.profileImage || "/images/default-profile.jpg"}
+              alt="Profile"
+              fill
+              className="object-cover"
+            />
+          </ProfileImageContainer>
+          <Link href="/notifications">
+            <Bell size={24} color="#0077b6" />
+          </Link>
+        </HeaderRight>
       </Header>
       
       <MainContent>
-        <CommunityGrid>
-          {communities.map((community: any) => (
-            <CommunityCard key={community.id}>
-              <CardHeader>
-                <Users size={20} color="#0088CC" />
-                <h3>{community.name}</h3>
-              </CardHeader>
-              <CardStats>
-                <div>
-                  <User size={16} />
-                  <span>{community.memberCount || 0}</span>
-                </div>
-                <div>
-                  <MessageSquare size={16} />
-                  <span>{community.postCount || 0}</span>
-                </div>
-                <div>
-                  <Heart size={16} />
-                  <span>{community.likeCount || 0}</span>
-                </div>
-              </CardStats>
-            </CommunityCard>
+        <SectionTitle>Explore The Best Of Our Community</SectionTitle>
+        
+        <FeaturesGrid>
+          {features.map(feature => (
+            <FeatureCard key={feature.id} onClick={() => router.push(feature.route)}>
+              <FeatureImage>
+                <Image
+                  src={feature.image}
+                  alt={feature.title}
+                  fill
+                  className="object-cover"
+                />
+              </FeatureImage>
+              <FeatureTitle>{feature.title}</FeatureTitle>
+            </FeatureCard>
           ))}
-        </CommunityGrid>
+        </FeaturesGrid>
+        
+        <BackButton onClick={handleBackToHome}>
+          Back To Home Screen
+        </BackButton>
       </MainContent>
       
       <BottomNav />

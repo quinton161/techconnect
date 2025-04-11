@@ -1,50 +1,99 @@
 'use client';
 
-import { useState, useCallback, memo } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useState, useCallback } from 'react';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, Sun } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
 
-const FormContainer = styled.div`
-  max-width: 400px;
-  width: 100%;
-  padding: 2rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+const Container = styled.div`
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+`;
+
+const ThemeToggle = styled.div`
+  display: flex;
+  align-items: center;
+  background-color: #e6e6e6;
+  width: fit-content;
+  padding: 4px;
+  border-radius: 20px;
+  margin-bottom: 1.5rem;
+`;
+
+const ToggleButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #000;
+  color: white;
+  cursor: pointer;
+`;
+
+const AppTitle = styled.h1`
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #0088CC;
+`;
+
+const LightBulbContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 `;
 
 const InputGroup = styled.div`
   position: relative;
+  margin-bottom: 0.25rem;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e5e5;
+  padding: 0.85rem 1rem 0.85rem 3rem;
+  background-color: #e6e6e6;
+  border: none;
   border-radius: 0.5rem;
   font-size: 1rem;
-  transition: border-color 0.2s;
-  background: white;
+  transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: #0088CC;
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.1);
   }
   
   &::placeholder {
-    color: #999;
+    color: #666;
   }
+`;
+
+const InputIcon = styled.div`
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const PasswordToggle = styled.button`
@@ -68,15 +117,16 @@ const PasswordToggle = styled.button`
 
 const Button = styled.button`
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.85rem;
   background: #0088CC;
   color: white;
   border: none;
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  margin-top: 0.25rem;
   
   &:hover {
     background: #006699;
@@ -92,53 +142,98 @@ const Button = styled.button`
   }
 `;
 
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0;
+  
+  &:before, &:after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  span {
+    margin: 0 10px;
+    color: #666;
+    font-size: 0.9rem;
+  }
+`;
+
+const SocialLoginContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+`;
+
+const SocialButton = styled.button`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+  }
+  
+  img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+  }
+`;
+
+const Footer = styled.div`
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #333;
+  
+  a {
+    color: #0088CC;
+    text-decoration: none;
+    font-weight: 500;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
+const BottomDivider = styled.div`
+  height: 4px;
+  background-color: #111;
+  width: 50px;
+  margin: 1.5rem auto 0;
+`;
+
 const ErrorMessage = styled.p`
   color: #dc3545;
   font-size: 0.875rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
 `;
 
-// Memoized input component
-const FormInput = memo(({ 
-  type, 
-  placeholder, 
-  value, 
-  onChange, 
-  required 
-}: { 
-  type: string;
-  placeholder: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  required?: boolean;
-}) => (
-  <Input
-    type={type}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    required={required}
-  />
-));
-
-FormInput.displayName = 'FormInput';
-
 export default function SignUpForm() {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const validateForm = useCallback(() => {
-    if (!email || !password || !confirmPassword) {
+    if (!fullName || !email || !password) {
       setError('Please fill in all fields');
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
       return false;
     }
     if (password.length < 6) {
@@ -146,7 +241,7 @@ export default function SignUpForm() {
       return false;
     }
     return true;
-  }, [email, password, confirmPassword]);
+  }, [fullName, email, password]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,14 +255,20 @@ export default function SignUpForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Update user profile with full name
+      await updateProfile(user, {
+        displayName: fullName
+      });
+
       // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
+        displayName: fullName,
         email: user.email,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      router.push('/');
+      router.push('/home');
     } catch (err: any) {
       switch (err.code) {
         case 'auth/email-already-in-use':
@@ -185,19 +286,52 @@ export default function SignUpForm() {
     } finally {
       setLoading(false);
     }
-  }, [email, password, confirmPassword, validateForm, router]);
+  }, [fullName, email, password, validateForm, router]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
   }, []);
 
+  const handleSocialLogin = (provider: string) => {
+    // This would be implemented with Firebase social auth
+    console.log(`Login with ${provider}`);
+  };
+
   return (
-    <FormContainer>
+    <Container>
+      <ThemeToggle>
+        <ToggleButton>
+          <Sun size={16} />
+        </ToggleButton>
+      </ThemeToggle>
+      
+      <AppTitle>Tech Connect</AppTitle>
+      
+      <LightBulbContainer>
+        <img src="/lightbulb.svg" alt="Lightbulb" width={60} height={60} />
+      </LightBulbContainer>
+      
       <Form onSubmit={handleSubmit}>
         <InputGroup>
-          <FormInput
+          <InputIcon>
+            <User size={20} />
+          </InputIcon>
+          <Input
+            type="text"
+            placeholder="Enter Full Name..."
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
+        </InputGroup>
+
+        <InputGroup>
+          <InputIcon>
+            <Mail size={20} />
+          </InputIcon>
+          <Input
             type="email"
-            placeholder="Email"
+            placeholder="Enter Email..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -205,9 +339,12 @@ export default function SignUpForm() {
         </InputGroup>
 
         <InputGroup>
-          <FormInput
+          <InputIcon>
+            <Lock size={20} />
+          </InputIcon>
+          <Input
             type={showPassword ? 'text' : 'password'}
-            placeholder="Password"
+            placeholder="Enter Password..."
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -221,22 +358,34 @@ export default function SignUpForm() {
           </PasswordToggle>
         </InputGroup>
 
-        <InputGroup>
-          <FormInput
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-          />
-        </InputGroup>
-
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
         <Button type="submit" disabled={loading}>
           {loading ? 'Creating Account...' : 'Sign Up'}
         </Button>
       </Form>
-    </FormContainer>
+      
+      <Divider>
+        <span>Or Sign Up With</span>
+      </Divider>
+      
+      <SocialLoginContainer>
+        <SocialButton onClick={() => handleSocialLogin('facebook')}>
+          <img src="/facebook.svg" alt="Facebook" />
+        </SocialButton>
+        <SocialButton onClick={() => handleSocialLogin('google')}>
+          <img src="/google.svg" alt="Google" />
+        </SocialButton>
+        <SocialButton onClick={() => handleSocialLogin('apple')}>
+          <img src="/apple.svg" alt="Apple" />
+        </SocialButton>
+      </SocialLoginContainer>
+      
+      <Footer>
+        Already have an account? <Link href="/auth/login">Login in</Link>
+      </Footer>
+      
+      <BottomDivider />
+    </Container>
   );
 }

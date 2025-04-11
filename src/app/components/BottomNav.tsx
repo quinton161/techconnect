@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import styled from 'styled-components';
-import { Home, Search, PlusSquare, MessageSquare, User } from 'lucide-react';
+import { Home, Search, MessageSquare, User } from 'lucide-react';
+import Image from 'next/image';
 
 const NavContainer = styled.nav`
   position: fixed;
@@ -59,11 +60,11 @@ const NavLabel = styled.span`
 
 const CreateButton = styled(NavButton)`
   transform: translateY(-1rem);
-  background: #0088CC;
+  background: #000000;
   color: white;
   padding: 0.75rem;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 136, 204, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 
   &:hover {
     color: white;
@@ -74,6 +75,14 @@ const CreateButton = styled(NavButton)`
     width: 1.25rem;
     height: 1.25rem;
   }
+`;
+
+const AiIconWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 `;
 
 export default function BottomNav() {
@@ -110,7 +119,15 @@ export default function BottomNav() {
         onClick={() => handleNavigation('/create')}
         title="Create Post"
       >
-        <PlusSquare size={24} />
+        <AiIconWrapper>
+          <Image 
+            src="/images/Ai.svg" 
+            alt="AI" 
+            width={24} 
+            height={24} 
+            className="invert brightness-0" 
+          />
+        </AiIconWrapper>
       </CreateButton>
       
       <NavButton 

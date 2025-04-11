@@ -1,19 +1,88 @@
 'use client';
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Heart, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock } from "lucide-react";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 
-export default function VREventPage() {
+// Event data (in a real app, this would come from an API or database)
+const eventsData = {
+  'vr-update': {
+    id: 'vr-update',
+    title: 'VR Update Launch',
+    image: '/images/vr.png',
+    location: 'Zimbabwe International Trade Fair',
+    city: 'Bulawayo',
+    time: '21-22 April 2023',
+    timeRange: '1200-1400',
+    price: 'Free Entry'
+  },
+  'design-mindset': {
+    id: 'design-mindset',
+    title: 'Design Mindset Event',
+    image: '/images/design.png',
+    location: 'Online Meetup/Google Drive',
+    city: 'Virtual',
+    time: '21-22 April 2023',
+    timeRange: '1200-1600',
+    price: 'Free Entry'
+  }
+};
+
+export default function EventDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (params.id) {
+      const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
+      
+      // Get event data
+      const eventData = eventsData[eventId as keyof typeof eventsData];
+      if (eventData) {
+        setEvent(eventData);
+      } else {
+        // Handle event not found
+        router.push('/events');
+      }
+      
+      setLoading(false);
+    }
+  }, [params.id, router]);
+
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto bg-white min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#0077b6] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="max-w-md mx-auto bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center p-6">
+          <h2 className="text-xl font-bold mb-2">Event Not Found</h2>
+          <p className="mb-4">The event you're looking for doesn't exist.</p>
+          <Link href="/events">
+            <Button className="bg-[#0077b6]">Back to Events</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col">
       {/* Header Image with Navigation */}
       <div className="relative">
         <Image
-          src="/images/vr.png"
-          alt="Person wearing VR headset"
+          src={event.image}
+          alt={event.title}
           width={500}
           height={400}
           className="w-full h-[300px] object-cover"
@@ -46,9 +115,9 @@ export default function VREventPage() {
       <div className="p-6 flex-1 flex flex-col">
         {/* Title and Button */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">VR Update Launch</h1>
+          <h1 className="text-2xl font-bold">{event.title}</h1>
           <Button className="bg-[#0077b6] hover:bg-[#00689d] text-white rounded-full px-4 py-2 text-sm">
-            Free Entry
+            {event.price}
           </Button>
         </div>
 
@@ -60,7 +129,7 @@ export default function VREventPage() {
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="w-6 h-6 rounded-full border border-white overflow-hidden">
                   <Image
-                    src="/images/community1.png"
+                    src={`/images/${i}.png`}
                     alt="Community member"
                     width={24}
                     height={24}
@@ -81,8 +150,8 @@ export default function VREventPage() {
             <MapPin className="h-6 w-6 text-[#0077b6]" />
           </div>
           <div>
-            <p className="font-medium">Bulawayo</p>
-            <p className="text-gray-700">Zimbabwe International Trade Fair</p>
+            <p className="font-medium">{event.city}</p>
+            <p className="text-gray-700">{event.location}</p>
           </div>
         </div>
 
@@ -92,8 +161,8 @@ export default function VREventPage() {
             <Clock className="h-6 w-6 text-[#0077b6]" />
           </div>
           <div>
-            <p className="font-medium">April 21-22 2025</p>
-            <p className="text-gray-700">1205-1400</p>
+            <p className="font-medium">{event.time}</p>
+            <p className="text-gray-700">{event.timeRange}</p>
           </div>
         </div>
 
@@ -105,7 +174,7 @@ export default function VREventPage() {
 
       {/* Bottom Indicator */}
       <div className="flex justify-center pb-4">
-        <div className="w-16 h-1 bg-black rounded-full"></div>
+        <div className="w-16 h-1 bg-black/20 rounded-full"></div>
       </div>
     </div>
   );

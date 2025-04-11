@@ -2,124 +2,82 @@
 
 import styled from 'styled-components';
 import Link from 'next/link';
-import { useState } from 'react';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import FacebookIcon from '@mui/icons-material/Facebook';
-import GoogleIcon from '@mui/icons-material/Google';
-import AppleIcon from '@mui/icons-material/Apple';
-import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
-import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import { useState, useCallback } from 'react';
+import { Eye, EyeOff, Mail, Lock, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import Image from 'next/image';
 
 const Container = styled.div`
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  padding: 1.5rem;
-  background: white;
-  overflow: hidden;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 2rem;
+  min-height: 100vh;
 `;
 
 const ThemeToggle = styled.div`
-  width: 60px;
-  height: 30px;
-  background: #E8E8E8;
-  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  background-color: #e6e6e6;
+  width: fit-content;
   padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+  border-radius: 20px;
+  margin-bottom: 1.5rem;
 `;
 
-const ToggleKnob = styled.div<{ $isDark?: boolean }>`
-  width: 22px;
-  height: 22px;
+const ToggleButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: ${props => props.$isDark ? '#333333' : 'white'};
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: translateX(${props => props.$isDark ? '30px' : '0'});
-  transition: all 0.3s ease;
-
-  svg {
-    color: ${props => props.$isDark ? 'white' : '#333333'};
-    font-size: 16px;
-  }
+  background-color: #000;
+  color: white;
+  cursor: pointer;
 `;
 
-const LogoContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const Logo = styled.div`
-  width: 200px;
-  height: 60px;
-  position: relative;
-`;
-
-const Title = styled.h1`
-  font-size: 2.25rem;
-  font-weight: 600;
-  text-align: center;
+const AppTitle = styled.h1`
+  font-size: 2rem;
+  font-weight: 700;
   margin-bottom: 1rem;
-  color: #000;
+  text-align: center;
+  color: #0088CC;
 `;
 
-const LightBulb = styled.div`
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 2rem;
+const LightBulbContainer = styled.div`
   display: flex;
-  align-items: center;
   justify-content: center;
-
-  svg {
-    width: 32px;
-    height: 32px;
-  }
+  margin-bottom: 2rem;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 400px;
-  margin: 0 auto;
-  width: 100%;
+  gap: 0.75rem;
 `;
 
-const InputContainer = styled.div`
+const InputGroup = styled.div`
   position: relative;
-  width: 100%;
+  margin-bottom: 0.25rem;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 1rem;
-  padding-left: 3rem;
-  padding-right: ${props => props.type === 'password' ? '3rem' : '1rem'};
-  background: #F5F5F5;
+  padding: 0.85rem 1rem 0.85rem 3rem;
+  background-color: #e6e6e6;
   border: none;
-  border-radius: 12px;
+  border-radius: 0.5rem;
   font-size: 1rem;
-  color: #333;
+  transition: all 0.2s;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.1);
+  }
   
   &::placeholder {
     color: #666;
@@ -137,88 +95,111 @@ const InputIcon = styled.div`
   justify-content: center;
 `;
 
-const VisibilityIcon = styled.div`
+const PasswordToggle = styled.button`
   position: absolute;
   right: 1rem;
   top: 50%;
   transform: translateY(-50%);
+  background: none;
+  border: none;
   color: #666;
   cursor: pointer;
+  padding: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  &:hover {
+    color: #0088CC;
+  }
 `;
 
-const LoginButton = styled.button`
+const Button = styled.button`
+  width: 100%;
+  padding: 0.85rem;
   background: #0088CC;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 1rem;
-  font-size: 1rem;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
   font-weight: 500;
   cursor: pointer;
-  margin-top: 0.5rem;
-  width: 100%;
+  transition: all 0.2s;
+  margin-top: 0.25rem;
   
   &:hover {
     background: #006699;
   }
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 `;
 
 const Divider = styled.div`
-  text-align: center;
-  margin: 2rem 0;
-  color: #666;
-  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0;
   
-  &::before, &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: calc(50% - 80px);
-    height: 1px;
-    background: #E8E8E8;
+  &:before, &:after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
   }
   
-  &::before { left: 0; }
-  &::after { right: 0; }
+  span {
+    margin: 0 10px;
+    color: #666;
+    font-size: 0.9rem;
+  }
 `;
 
-const SocialButtons = styled.div`
+const SocialLoginContainer = styled.div`
   display: flex;
   justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
 `;
 
 const SocialButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
   
-  svg {
-    width: 24px;
-    height: 24px;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+  }
+  
+  img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
   }
 `;
 
-const SignUpLink = styled.div`
+const Footer = styled.div`
   text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
   color: #333;
-  margin-top: auto;
-  padding-bottom: 0.5rem;
   
   a {
     color: #0088CC;
     text-decoration: none;
-    margin-left: 0.5rem;
+    font-weight: 500;
     
     &:hover {
       text-decoration: underline;
@@ -226,143 +207,146 @@ const SignUpLink = styled.div`
   }
 `;
 
-const ErrorMessage = styled.div`
-  color: #ff3333;
-  text-align: center;
-  margin-top: 0.5rem;
+const BottomDivider = styled.div`
+  height: 4px;
+  background-color: #111;
+  width: 50px;
+  margin: 1.5rem auto 0;
+`;
+
+const ErrorMessage = styled.p`
+  color: #dc3545;
   font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
 `;
 
 const LoginForm = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
     
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      setLoading(true);
+      setError('');
       
-      // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      await signInWithEmailAndPassword(auth, email, password);
       
-      if (!userDoc.exists()) {
-        // Create user document if it doesn't exist
-        await setDoc(doc(db, 'users', user.uid), {
-          email: user.email,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-      
-      // Redirect to home page
-      router.push('/');
+      router.push('/home');
     } catch (err: any) {
-      console.error('Login error:', err.code);
       switch (err.code) {
-        case 'auth/invalid-email':
-          setError('Invalid email address');
-          break;
+        case 'auth/invalid-credential':
         case 'auth/user-not-found':
-          setError('No account found with this email');
-          break;
         case 'auth/wrong-password':
-          setError('Incorrect password');
+          setError('Invalid email or password');
+          break;
+        case 'auth/too-many-requests':
+          setError('Too many failed login attempts. Please try again later.');
           break;
         default:
-          setError('Failed to login. Please try again.');
+          setError('Failed to log in. Please try again.');
       }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    // This would be implemented with Firebase social auth
+    console.log(`Login with ${provider}`);
   };
 
   return (
     <Container>
-      <TopBar>
-        <ThemeToggle onClick={() => setIsDarkMode(!isDarkMode)}>
-          <ToggleKnob $isDark={isDarkMode}>
-            {isDarkMode ? 
-              <DarkModeOutlinedIcon sx={{ fontSize: 16 }} /> : 
-              <LightModeOutlinedIcon sx={{ fontSize: 16 }} />
-            }
-          </ToggleKnob>
-        </ThemeToggle>
-      </TopBar>
+      <ThemeToggle>
+        <ToggleButton>
+          <Sun size={16} />
+        </ToggleButton>
+      </ThemeToggle>
       
-      <Title>Tech Connect</Title>
+      <AppTitle>Tech Connect</AppTitle>
       
-      <LightBulb>
-        <svg viewBox="0 0 24 24" fill="#FFD700" stroke="black" strokeWidth="1">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/>
-          <path d="M9 21h6" stroke="black" strokeWidth="1" strokeLinecap="round"/>
-          <path d="M9 18h6" stroke="black" strokeWidth="1" strokeLinecap="round"/>
-        </svg>
-      </LightBulb>
+      <LightBulbContainer>
+        <img src="/lightbulb.svg" alt="Lightbulb" width={60} height={60} />
+      </LightBulbContainer>
       
       <Form onSubmit={handleSubmit}>
-        <InputContainer>
+        <InputGroup>
           <InputIcon>
-            <PersonOutlineIcon />
+            <Mail size={20} />
           </InputIcon>
-          <Input 
-            type="email" 
-            placeholder="Enter Email..." 
+          <Input
+            type="email"
+            placeholder="Enter Email..."
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </InputContainer>
-        
-        <InputContainer>
+        </InputGroup>
+
+        <InputGroup>
           <InputIcon>
-            <LockOutlinedIcon />
+            <Lock size={20} />
           </InputIcon>
-          <Input 
-            type={showPassword ? "text" : "password"} 
-            placeholder="Enter Password..." 
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Enter Password..."
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <VisibilityIcon onClick={() => setShowPassword(!showPassword)}>
-            <VisibilityOutlinedIcon />
-          </VisibilityIcon>
-        </InputContainer>
-        
+          <PasswordToggle
+            type="button"
+            onClick={togglePasswordVisibility}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </PasswordToggle>
+        </InputGroup>
+
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        
-        <LoginButton type="submit" disabled={isLoading}>
-          {isLoading ? 'Logging in...' : 'Login'}
-        </LoginButton>
+
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </Button>
       </Form>
       
-      <Divider>Or Log In With</Divider>
+      <Divider>
+        <span>Or Login With</span>
+      </Divider>
       
-      <SocialButtons>
-        <SocialButton>
-          <FacebookIcon sx={{ color: '#1877F2' }} />
+      <SocialLoginContainer>
+        <SocialButton onClick={() => handleSocialLogin('facebook')}>
+          <img src="/facebook.svg" alt="Facebook" />
         </SocialButton>
-        <SocialButton>
-          <GoogleIcon sx={{ color: '#DB4437' }} />
+        <SocialButton onClick={() => handleSocialLogin('google')}>
+          <img src="/google.svg" alt="Google" />
         </SocialButton>
-        <SocialButton>
-          <AppleIcon sx={{ color: '#000000' }} />
+        <SocialButton onClick={() => handleSocialLogin('apple')}>
+          <img src="/apple.svg" alt="Apple" />
         </SocialButton>
-      </SocialButtons>
+      </SocialLoginContainer>
       
-      <SignUpLink>
-        Don't have an account?
-        <Link href="/auth/signup">Sign up</Link>
-      </SignUpLink>
+      <Footer>
+        Don't have an account? <Link href="/auth/signup">Sign Up</Link>
+      </Footer>
+      
+      <BottomDivider />
     </Container>
   );
 };

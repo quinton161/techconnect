@@ -5,16 +5,17 @@ import Link from "next/link"
 import { ArrowLeft, Bell, MapPin, Clock, Search } from "lucide-react"
 import styled from "styled-components"
 import BottomNav from "@/components/BottomNav"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 const Container = styled.div`
   max-width: 500px;
   margin: 0 auto;
   background: white;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: 0;
+  position: relative;
 `;
 
 const Header = styled.header`
@@ -35,9 +36,9 @@ const HeaderLeft = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: bold;
-  color: #0088CC;
+  color: #0077b6;
 `;
 
 const HeaderRight = styled.div`
@@ -46,16 +47,33 @@ const HeaderRight = styled.div`
   gap: 1rem;
 `;
 
+const ProfileImageContainer = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+`;
+
 const MainContent = styled.main`
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0 1rem;
+  padding-bottom: 70px;
   
   &::-webkit-scrollbar {
-    display: none;
+    width: 6px;
   }
-  scrollbar-width: none;
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 119, 182, 0.3);
+    border-radius: 3px;
+  }
 `;
 
 const SearchSection = styled.div`
@@ -112,9 +130,15 @@ const CategoryButton = styled.button<{ $active?: boolean }>`
   border-radius: 9999px;
   font-size: 0.875rem;
   border: none;
-  background: ${props => props.$active ? '#0088CC' : '#fff'};
+  background: ${props => props.$active ? '#0077b6' : '#fff'};
   color: ${props => props.$active ? '#fff' : '#000'};
-  border: 1px solid ${props => props.$active ? '#0088CC' : '#e5e5e5'};
+  border: 1px solid ${props => props.$active ? '#0077b6' : '#e5e5e5'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.$active ? '#0077b6' : '#f0f0f0'};
+  }
 `;
 
 const EventsSection = styled.div`
@@ -130,7 +154,7 @@ const SectionHeader = styled.div`
 
 const ViewAllLink = styled.a`
   font-size: 0.875rem;
-  color: #0088CC;
+  color: #0077b6;
   text-decoration: none;
 `;
 
@@ -147,6 +171,12 @@ const EventCard = styled.div`
   overflow: hidden;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
 `;
 
 const EventImageWrapper = styled.div`
@@ -176,20 +206,55 @@ const EventDetail = styled.div`
 
 const BackButton = styled.button`
   width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
+  padding: 1rem;
+  border-radius: 9999px;
   font-size: 1rem;
   font-weight: 500;
   border: none;
-  background: #0088CC;
+  background: #0077b6;
   color: white;
-  margin: 1.5rem 0 5rem;
+  margin: 1.5rem 0 2rem;
   cursor: pointer;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    background: #00669e;
+  }
 `;
 
 export default function EventsPage() {
+  const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState("UI/UX Design");
+
+  const handleBackToHome = () => {
+    router.push('/home');
+  };
+
+  const categories = [
+    { id: 'all', name: 'All' },
+    { id: 'ui-ux', name: 'UI/UX Design' },
+    { id: 'software', name: 'Software' },
+    { id: 'digital-marketing', name: 'Digital Marketing' }
+  ];
+  
+  const events = [
+    {
+      id: 'vr-update',
+      title: 'VR Update Launch',
+      image: '/images/vr.png',
+      location: 'Zimbabwe International Trade Fair',
+      time: '21-22 April 2023/ 1200-1400'
+    },
+    {
+      id: 'design-mindset',
+      title: 'Design Mindset Event',
+      image: '/images/design.png',
+      location: 'Online Meetup/Google Drive',
+      time: '21-22 April 2023/ 1200-1600'
+    }
+  ];
+
   return (
     <Container>
       <Header>
@@ -200,16 +265,15 @@ export default function EventsPage() {
           <Title>Events</Title>
         </HeaderLeft>
         <HeaderRight>
-          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#0088CC]">
+          <ProfileImageContainer>
             <Image
-              src="/images/Rectangle 2.png"
+              src="/images/default-profile.jpg"
               alt="Profile"
-              width={32}
-              height={32}
+              fill
               className="object-cover"
             />
-          </div>
-          <Bell className="h-6 w-6 text-[#0088CC]" />
+          </ProfileImageContainer>
+          <Bell size={24} color="#0077b6" />
         </HeaderRight>
       </Header>
 
@@ -224,10 +288,15 @@ export default function EventsPage() {
         <CategorySection>
           <CategoryTitle>Category Events</CategoryTitle>
           <CategoryScroll>
-            <CategoryButton>All</CategoryButton>
-            <CategoryButton $active>UI/UX Design</CategoryButton>
-            <CategoryButton>Software</CategoryButton>
-            <CategoryButton>Digital Marketing</CategoryButton>
+            {categories.map((category) => (
+              <CategoryButton 
+                key={category.id}
+                $active={activeCategory === category.name}
+                onClick={() => setActiveCategory(category.name)}
+              >
+                {category.name}
+              </CategoryButton>
+            ))}
           </CategoryScroll>
         </CategorySection>
 
@@ -237,65 +306,37 @@ export default function EventsPage() {
             <ViewAllLink href="#">View All</ViewAllLink>
           </SectionHeader>
           <EventsGrid>
-            <EventCard>
-              <EventImageWrapper>
-                <Image 
-                  src="/images/vr.png"
-                  alt="VR Update Launch"
-                  fill
-                  className="object-cover"
-                />
-              </EventImageWrapper>
-              <EventInfo>
-                <EventTitle>VR Update Launch</EventTitle>
-                <EventDetail>
-                  <MapPin className="h-3 w-3" />
-                  Zimbabwe International Trade Fair
-                </EventDetail>
-                <EventDetail>
-                  <Clock className="h-3 w-3" />
-                  21-22 April 2025 / 1200-1400
-                </EventDetail>
-              </EventInfo>
-            </EventCard>
-
-            <EventCard>
-              <EventImageWrapper>
-                <div className="absolute top-2 left-2 bg-[#F2F2F2] rounded-full p-1">
+            {events.map((event) => (
+              <EventCard key={event.id} onClick={() => router.push(`/events/${event.id}`)}>
+                <EventImageWrapper>
                   <Image 
-                    src="/images/Ellipse 12.png"
-                    alt="Imaginary"
-                    width={18}
-                    height={18}
+                    src={event.image}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
                   />
-                </div>
-                <Image 
-                  src="/images/design.png"
-                  alt="Design Mindset Event"
-                  fill
-                  className="object-cover"
-                />
-              </EventImageWrapper>
-              <EventInfo>
-                <EventTitle>Design Mindset Event</EventTitle>
-                <EventDetail>
-                  <MapPin className="h-3 w-3" />
-                  Online Meetup/Google Drive
-                </EventDetail>
-                <EventDetail>
-                  <Clock className="h-3 w-3" />
-                  21-22 April 2025 / 1200-1600
-                </EventDetail>
-              </EventInfo>
-            </EventCard>
+                </EventImageWrapper>
+                <EventInfo>
+                  <EventTitle>{event.title}</EventTitle>
+                  <EventDetail>
+                    <MapPin size={14} />
+                    <span>{event.location}</span>
+                  </EventDetail>
+                  <EventDetail>
+                    <Clock size={14} />
+                    <span>{event.time}</span>
+                  </EventDetail>
+                </EventInfo>
+              </EventCard>
+            ))}
           </EventsGrid>
         </EventsSection>
 
-        <BackButton onClick={() => window.location.href = "/"}>
+        <BackButton onClick={handleBackToHome}>
           Back To Home Screen
         </BackButton>
       </MainContent>
-
+      
       <BottomNav />
     </Container>
   );

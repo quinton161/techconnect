@@ -69,7 +69,7 @@ export default function BottomNav() {
           />
           <NavItem
             href="/profile"
-            icon="/images/david.jpg"
+            icon="/images/default-profile.jpg"
             label="Profile"
             isActive={pathname === "/profile"}
           />
